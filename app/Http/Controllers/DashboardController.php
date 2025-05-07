@@ -18,6 +18,11 @@ class DashboardController extends Controller
         
         // Get all transactions for the current user
         $transactions = Transaction::where('user_id', $user->id)->get();
+        
+        // Debug: Check if transactions collection is empty
+        if ($transactions->isEmpty()) {
+            \Log::info('No transactions found for user: ' . $user->id);
+        }
             
         // Calculate monthly totals
         $monthlyIncome = $transactions
@@ -43,12 +48,21 @@ class DashboardController extends Controller
             ->groupBy('categories.name')
             ->get();
             
-        return view('dashboard', compact(
-            'transactions',
-            'monthlyIncome',
-            'monthlyExpense',
-            'netBalance',
-            'expensesByCategory'
-        ));
+        // Debug: Log the view data
+        \Log::info('Dashboard view data:', [
+            'transactions_count' => $transactions->count(),
+            'monthly_income' => $monthlyIncome,
+            'monthly_expense' => $monthlyExpense,
+            'net_balance' => $netBalance,
+            'expenses_by_category_count' => $expensesByCategory->count()
+        ]);
+
+        return view('dashboard', [
+            'transactions' => $transactions,
+            'monthlyIncome' => $monthlyIncome,
+            'monthlyExpense' => $monthlyExpense,
+            'netBalance' => $netBalance,
+            'expensesByCategory' => $expensesByCategory
+        ]);
     }
 }

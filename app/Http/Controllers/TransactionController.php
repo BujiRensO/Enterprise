@@ -50,15 +50,12 @@ class TransactionController extends Controller
      */
     public function create()
     {
-        $user = Auth::user();
-        $incomeCategories = Category::where('user_id', $user->id)
-            ->where('type', 'income')
+        $categories = Category::where('user_id', auth()->id())
+            ->orderBy('type')
+            ->orderBy('name')
             ->get();
-        $expenseCategories = Category::where('user_id', $user->id)
-            ->where('type', 'expense')
-            ->get();
-            
-        return view('transactions.create', compact('incomeCategories', 'expenseCategories'));
+
+        return view('transactions.create', compact('categories'));
     }
 
     /**
@@ -67,30 +64,17 @@ class TransactionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'type' => 'required|in:income,expense',
             'category_id' => 'required|exists:categories,id',
+            'amount' => 'required|numeric|min:0',
+            'type' => 'required|in:income,expense',
             'date' => 'required|date',
             'description' => 'nullable|string|max:255',
         ]);
-        
-        $user = Auth::user();
-        
-        // Create the transaction
-        $transaction = new Transaction();
-        $transaction->user_id = $user->id;
-        $transaction->amount = $validated['amount'];
-        $transaction->type = $validated['type'];
-        $transaction->category_id = $validated['category_id'];
-        $transaction->date = $validated['date'];
-        $transaction->description = $validated['description'] ?? null;
-        $transaction->save();
-        
-        // Check budget if it's an expense
-        if ($validated['type'] == 'expense') {
-            $this->checkBudgetLimits($user->id, $validated['category_id']);
-        }
-        
+
+        $validated['user_id'] = auth()->id();
+
+        Transaction::create($validated);
+
         return redirect()->route('transactions.index')
             ->with('success', 'Transaction created successfully.');
     }
@@ -112,19 +96,12 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $transaction);
         
-        $user = Auth::user();
-        $incomeCategories = Category::where('user_id', $user->id)
-            ->where('type', 'income')
+        $categories = Category::where('user_id', auth()->id())
+            ->orderBy('type')
+            ->orderBy('name')
             ->get();
-        $expenseCategories = Category::where('user_id', $user->id)
-            ->where('type', 'expense')
-            ->get();
-            
-        return view('transactions.edit', compact(
-            'transaction', 
-            'incomeCategories', 
-            'expenseCategories'
-        ));
+
+        return view('transactions.edit', compact('transaction', 'categories'));
     }
 
     /**
@@ -133,35 +110,17 @@ class TransactionController extends Controller
     public function update(Request $request, Transaction $transaction)
     {
         $this->authorize('update', $transaction);
-        
+
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'type' => 'required|in:income,expense',
             'category_id' => 'required|exists:categories,id',
+            'amount' => 'required|numeric|min:0',
+            'type' => 'required|in:income,expense',
             'date' => 'required|date',
             'description' => 'nullable|string|max:255',
         ]);
-        
-        $oldType = $transaction->type;
-        $oldCategoryId = $transaction->category_id;
-        
-        $transaction->amount = $validated['amount'];
-        $transaction->type = $validated['type'];
-        $transaction->category_id = $validated['category_id'];
-        $transaction->date = $validated['date'];
-        $transaction->description = $validated['description'] ?? null;
-        $transaction->save();
-        
-        // Check budget if it's a new expense or updated expense
-        if ($validated['type'] == 'expense') {
-            $this->checkBudgetLimits(Auth::id(), $validated['category_id']);
-        }
-        
-        // If it was previously an expense, check the old category's budget as well
-        if ($oldType == 'expense' && $oldCategoryId != $validated['category_id']) {
-            $this->checkBudgetLimits(Auth::id(), $oldCategoryId);
-        }
-        
+
+        $transaction->update($validated);
+
         return redirect()->route('transactions.index')
             ->with('success', 'Transaction updated successfully.');
     }
@@ -173,16 +132,8 @@ class TransactionController extends Controller
     {
         $this->authorize('delete', $transaction);
         
-        $categoryId = $transaction->category_id;
-        $type = $transaction->type;
-        
         $transaction->delete();
-        
-        // Check budget after deletion if it was an expense
-        if ($type == 'expense') {
-            $this->checkBudgetLimits(Auth::id(), $categoryId);
-        }
-        
+
         return redirect()->route('transactions.index')
             ->with('success', 'Transaction deleted successfully.');
     }

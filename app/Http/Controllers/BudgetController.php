@@ -7,9 +7,12 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class BudgetController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the budgets.
      */
@@ -32,7 +35,13 @@ class BudgetController extends Controller
         $budgets = $query->paginate(10);
         $categories = Category::where('user_id', Auth::id())->get();
 
-        return view('budgets.index', compact('budgets', 'categories'));
+        $months = collect(range(1, 12))->mapWithKeys(function ($month) {
+            return [$month => Carbon::create()->month($month)->format('F')];
+        });
+
+        $years = collect(range(Carbon::now()->year - 2, Carbon::now()->year + 5));
+
+        return view('budgets.index', compact('budgets', 'categories', 'months', 'years'));
     }
 
     /**
