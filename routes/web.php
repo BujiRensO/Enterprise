@@ -6,6 +6,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SampleDataController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -34,9 +35,10 @@ Route::middleware(['auth'])->group(function () {
     
     // Reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
-    Route::get('/reports/category', [ReportController::class, 'category'])->name('reports.category');
-    Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.exportPdf');
+    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+    // Sample Data
+    Route::get('/seed-data', [SampleDataController::class, 'seed'])->name('seed.data');
 });
 
 require __DIR__.'/auth.php';

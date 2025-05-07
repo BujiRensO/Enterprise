@@ -13,22 +13,25 @@ class BudgetController extends Controller
     /**
      * Display a listing of the budgets.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
-        $currentMonth = Carbon::now()->month;
-        $currentYear = Carbon::now()->year;
-        
-        $budgets = Budget::with('category')
-            ->where('user_id', $user->id)
-            ->where('month', $currentMonth)
-            ->where('year', $currentYear)
-            ->get();
-            
-        $categories = Category::where('user_id', $user->id)
-            ->where('type', 'expense')
-            ->get();
-            
+        $query = Budget::with('category')
+            ->where('user_id', Auth::id());
+
+        // Apply filters
+        if ($request->filled('month')) {
+            $query->where('month', $request->month);
+        }
+        if ($request->filled('year')) {
+            $query->where('year', $request->year);
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $budgets = $query->paginate(10);
+        $categories = Category::where('user_id', Auth::id())->get();
+
         return view('budgets.index', compact('budgets', 'categories'));
     }
 
@@ -37,12 +40,18 @@ class BudgetController extends Controller
      */
     public function create()
     {
-        $user = Auth::user();
-        $categories = Category::where('user_id', $user->id)
+        $categories = Category::where('user_id', auth()->id())
             ->where('type', 'expense')
+            ->orderBy('name')
             ->get();
-            
-        return view('budgets.create', compact('categories'));
+
+        $months = collect(range(1, 12))->mapWithKeys(function ($month) {
+            return [$month => Carbon::create()->month($month)->format('F')];
+        });
+
+        $years = collect(range(Carbon::now()->year, Carbon::now()->year + 5));
+
+        return view('budgets.create', compact('categories', 'months', 'years'));
     }
 
     /**
@@ -52,31 +61,15 @@ class BudgetController extends Controller
     {
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0',
             'month' => 'required|integer|between:1,12',
-            'year' => 'required|integer|min:2000',
+            'year' => 'required|integer|min:' . Carbon::now()->year,
         ]);
-        
-        // Check if budget already exists for this category and month/year
-        $existingBudget = Budget::where('user_id', Auth::id())
-            ->where('category_id', $validated['category_id'])
-            ->where('month', $validated['month'])
-            ->where('year', $validated['year'])
-            ->first();
-            
-        if ($existingBudget) {
-            return redirect()->route('budgets.create')
-                ->with('error', 'A budget already exists for this category and month/year.');
-        }
-        
-        $budget = new Budget();
-        $budget->user_id = Auth::id();
-        $budget->category_id = $validated['category_id'];
-        $budget->amount = $validated['amount'];
-        $budget->month = $validated['month'];
-        $budget->year = $validated['year'];
-        $budget->save();
-        
+
+        $validated['user_id'] = auth()->id();
+
+        Budget::create($validated);
+
         return redirect()->route('budgets.index')
             ->with('success', 'Budget created successfully.');
     }
@@ -87,13 +80,19 @@ class BudgetController extends Controller
     public function edit(Budget $budget)
     {
         $this->authorize('update', $budget);
-        
-        $user = Auth::user();
-        $categories = Category::where('user_id', $user->id)
+
+        $categories = Category::where('user_id', auth()->id())
             ->where('type', 'expense')
+            ->orderBy('name')
             ->get();
-            
-        return view('budgets.edit', compact('budget', 'categories'));
+
+        $months = collect(range(1, 12))->mapWithKeys(function ($month) {
+            return [$month => Carbon::create()->month($month)->format('F')];
+        });
+
+        $years = collect(range(Carbon::now()->year, Carbon::now()->year + 5));
+
+        return view('budgets.edit', compact('budget', 'categories', 'months', 'years'));
     }
 
     /**
@@ -102,33 +101,16 @@ class BudgetController extends Controller
     public function update(Request $request, Budget $budget)
     {
         $this->authorize('update', $budget);
-        
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0',
             'month' => 'required|integer|between:1,12',
-            'year' => 'required|integer|min:2000',
+            'year' => 'required|integer|min:' . Carbon::now()->year,
         ]);
-        
-        // Check if budget already exists for this category and month/year (excluding current budget)
-        $existingBudget = Budget::where('user_id', Auth::id())
-            ->where('category_id', $validated['category_id'])
-            ->where('month', $validated['month'])
-            ->where('year', $validated['year'])
-            ->where('id', '!=', $budget->id)
-            ->first();
-            
-        if ($existingBudget) {
-            return redirect()->route('budgets.edit', $budget)
-                ->with('error', 'A budget already exists for this category and month/year.');
-        }
-        
-        $budget->category_id = $validated['category_id'];
-        $budget->amount = $validated['amount'];
-        $budget->month = $validated['month'];
-        $budget->year = $validated['year'];
-        $budget->save();
-        
+
+        $budget->update($validated);
+
         return redirect()->route('budgets.index')
             ->with('success', 'Budget updated successfully.');
     }
@@ -139,9 +121,9 @@ class BudgetController extends Controller
     public function destroy(Budget $budget)
     {
         $this->authorize('delete', $budget);
-        
+
         $budget->delete();
-        
+
         return redirect()->route('budgets.index')
             ->with('success', 'Budget deleted successfully.');
     }

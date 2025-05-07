@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('year');
             $table->timestamps();
 
-            // Add unique constraint to prevent duplicate budgets for the same category and month/year
+            // Prevent duplicate budgets for the same category and month/year
             $table->unique(['user_id', 'category_id', 'month', 'year']);
         });
     }
