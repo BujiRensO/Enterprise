@@ -7,6 +7,7 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SampleDataController;
+use App\Http\Controllers\GoalController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -37,6 +38,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportsController::class, 'export'])->name('reports.export');
     Route::post('/reports/generate', [ReportsController::class, 'generate'])->name('reports.generate');
+
+    // Goals
+    Route::resource('goals', GoalController::class);
+    Route::patch('/goals/{goal}/progress', [GoalController::class, 'updateProgress'])->name('goals.update-progress');
 
     // Sample Data
     Route::get('/seed-data', [SampleDataController::class, 'seed'])->name('seed.data');
