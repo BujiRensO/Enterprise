@@ -8,6 +8,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SampleDataController;
 use App\Http\Controllers\GoalController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -42,6 +43,13 @@ Route::middleware(['auth'])->group(function () {
     // Goals
     Route::resource('goals', GoalController::class);
     Route::patch('/goals/{goal}/progress', [GoalController::class, 'updateProgress'])->name('goals.update-progress');
+
+    // Payments
+    Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');
+    Route::post('/payments/initiate', [PaymentController::class, 'initiate'])->name('payments.initiate');
+    Route::post('/payments/{payment}/details', [PaymentController::class, 'enterPaymentDetails'])->name('payments.details');
+    Route::post('/payments/{payment}/verify-otp', [PaymentController::class, 'verifyOTP'])->name('payments.verify-otp');
+    Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
 
     // Sample Data
     Route::get('/seed-data', [SampleDataController::class, 'seed'])->name('seed.data');

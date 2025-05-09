@@ -47,6 +47,9 @@
                                 <x-nav-link :href="route('goals.index')" :active="request()->routeIs('goals.*')">
                                     {{ __('Financial Goals') }}
                                 </x-nav-link>
+                                <x-nav-link :href="route('payments.create')" :active="request()->routeIs('payments.*')">
+                                    {{ __('Make Payment') }}
+                                </x-nav-link>
                             </div>
                         </div>
 
@@ -117,6 +120,9 @@
                         </x-responsive-nav-link>
                         <x-responsive-nav-link :href="route('goals.index')" :active="request()->routeIs('goals.*')">
                             {{ __('Financial Goals') }}
+                        </x-responsive-nav-link>
+                        <x-responsive-nav-link :href="route('payments.create')" :active="request()->routeIs('payments.*')">
+                            {{ __('Make Payment') }}
                         </x-responsive-nav-link>
                     </div>
 
@@ -193,5 +199,7 @@
                 {{ $slot }}
             </main>
         </div>
+
+        @stack('scripts')
     </body>
 </html>

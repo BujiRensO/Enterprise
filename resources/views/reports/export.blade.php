@@ -170,4 +170,4 @@
         <p>© {{ date('Y') }} Financial Management System. All rights reserved.</p>
     </div>
 </body>
-</html>
+</html> 
